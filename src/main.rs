@@ -31,24 +31,26 @@ fn main() -> Result<()> {
 
     // 1. Configure yt-dlp command
     let mut ytdlp_cmd = Command::new("yt-dlp");
-    
+
     // Base arguments
     ytdlp_cmd.args([
-        "--output", "-",      // Output to stdout
-        "--quiet",            // Reduce noise
-        "--progress",         // Show standard progress
-        "--extractor-args", "youtube:player_client=default", // Fix missing JS warning
+        "-4",                                                // Force IPv4
+        "--output", "-",                                     // Output to stdout
+        "--quiet",                                           // Reduce noise
+        "--progress",                                        // Show standard progress
+        "--extractor-args", "youtube:player_client=android", // <--- THE FIX: Use Android client
     ]);
 
-    // OPTIMIZATION: Select specific streams to save bandwidth
+    // OPTIMIZATION: Select specific streams
     match cli.mode {
         Mode::Mp3 => {
             // ONLY download audio. Huge bandwidth saving.
             ytdlp_cmd.args(["-f", "bestaudio/best"]);
         },
         Mode::Mp4 => {
-            // Download video + audio
-            ytdlp_cmd.args(["-f", "bestvideo+bestaudio/best"]);
+            // CRITICAL FIX: For piping to stdout, we MUST request a pre-merged format.
+            // 'bestvideo+bestaudio' fails over pipes because yt-dlp can't mux streams on the fly without a file.
+            ytdlp_cmd.args(["-f", "best[ext=mp4]/best"]);
         },
     }
 
